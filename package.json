@@ -1,6 +1,12 @@
 {
+    "name": "describer-micro-saas",
+    "version": "1.0.0",
+    "description": "AI-powered product description generator",
     "dependencies": {
       "jsonwebtoken": "^9.0.2"
+    },
+    "scripts": {
+      "dev": "vercel dev",
+      "build": "vercel build"
     }
   }
-  

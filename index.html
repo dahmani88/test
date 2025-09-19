@@ -2,36 +2,567 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Backend API Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Describer - AI Product Description Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        #response { white-space: pre-wrap; background-color: #f4f4f4; border: 1px solid #ddd; padding: 15px; margin-top: 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+            color: #F5F5F5;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #007BFF, #0056b3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #B0B0B0;
+            font-weight: 300;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeInLeft 0.6s ease-out 0.2s both;
+        }
+
+        .form-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            color: #007BFF;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #F5F5F5;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #F5F5F5;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007BFF;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 1.2rem;
+            background: linear-gradient(135deg, #007BFF, #0056b3);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 123, 255, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .generate-btn .loading {
+            display: none;
+        }
+
+        .generate-btn.loading .loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
+        .generate-btn.loading .btn-text {
+            display: none;
+        }
+
+        .output-section {
+            animation: fadeInRight 0.6s ease-out 0.4s both;
+        }
+
+        .output-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            color: #007BFF;
+            font-weight: 600;
+        }
+
+        .placeholder {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 3rem;
+            text-align: center;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .placeholder-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .placeholder p {
+            color: #B0B0B0;
+            font-size: 1.1rem;
+        }
+
+        .results-container {
+            display: none;
+        }
+
+        .description-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardFadeIn 0.6s ease-out forwards;
+        }
+
+        .description-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .description-card:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #007BFF;
+            flex: 1;
+        }
+
+        .copy-btn {
+            background: rgba(0, 123, 255, 0.2);
+            color: #007BFF;
+            border: 1px solid #007BFF;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .copy-btn:hover {
+            background: #007BFF;
+            color: white;
+        }
+
+        .copy-btn.copied {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .card-content {
+            color: #F5F5F5;
+            line-height: 1.7;
+        }
+
+        .error-message {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #007BFF;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes cardFadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .form-section,
+            .output-section {
+                animation: fadeInUp 0.6s ease-out both;
+            }
+
+            .form-section {
+                padding: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Backend API Proxy Test</h1>
-    <p>This button calls our own backend, which then calls Z.ai securely.</p>
-    <button id="testButton">Test Backend Proxy</button>
-    <h2>API Response:</h2>
-    <pre id="response">Click the button to see the response...</pre>
-    <script>
-        document.getElementById('testButton').addEventListener('click', async () => {
-            const responseArea = document.getElementById('response');
-            responseArea.textContent = 'Sending request to our backend...';
-            
-            try {
-                // Step 1: Frontend calls our own backend endpoint
-                const response = await fetch('/api/proxy', { method: 'POST' });
-                const data = await response.json();
+    <div class="container">
+        <div class="header">
+            <h1>Describer</h1>
+            <p>AI-Powered Product Description Generator</p>
+        </div>
+
+        <div class="main-content">
+            <div class="form-section">
+                <h2>Product Information</h2>
+                <form id="productForm">
+                    <div class="form-group">
+                        <label for="productName">Product Name</label>
+                        <input type="text" id="productName" required placeholder="Enter your product name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="features">Key Features (comma-separated)</label>
+                        <textarea id="features" required placeholder="Feature 1, Feature 2, Feature 3..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="audience">Target Audience</label>
+                        <input type="text" id="audience" required placeholder="Who is your target customer?">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="keywords">SEO Keywords (comma-separated)</label>
+                        <input type="text" id="keywords" required placeholder="keyword1, keyword2, keyword3...">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tone">Tone of Voice</label>
+                        <select id="tone" required>
+                            <option value="">Select tone</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Friendly">Friendly</option>
+                            <option value="Luxury">Luxury</option>
+                            <option value="Playful">Playful</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="language">Output Language</label>
+                        <input type="text" id="language" value="English" required placeholder="English">
+                    </div>
+
+                    <button type="submit" class="generate-btn">
+                        <span class="btn-text">Generate Descriptions</span>
+                        <span class="loading">⟳</span>
+                    </button>
+                </form>
+
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+
+            <div class="output-section">
+                <h2>Generated Descriptions</h2>
                 
-                if (!response.ok) {
-                    responseArea.textContent = `Error from our backend:\n${JSON.stringify(data, null, 2)}`;
-                } else {
-                    responseArea.textContent = `Success! Response from Z.ai:\n${JSON.stringify(data, null, 2)}`;
+                <div class="placeholder" id="placeholder">
+                    <div class="placeholder-icon">📝</div>
+                    <p>Fill out the form and click "Generate Descriptions" to see your AI-powered product descriptions here.</p>
+                </div>
+
+                <div class="loading-spinner" id="loadingSpinner">
+                    <div class="spinner"></div>
+                    <p>Generating your product descriptions...</p>
+                </div>
+
+                <div class="results-container" id="resultsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('productForm');
+            const generateBtn = document.querySelector('.generate-btn');
+            const placeholder = document.getElementById('placeholder');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const errorMessage = document.getElementById('errorMessage');
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Show loading state
+                showLoading();
+                
+                // Collect form data
+                const formData = {
+                    productName: document.getElementById('productName').value.trim(),
+                    features: document.getElementById('features').value.trim(),
+                    audience: document.getElementById('audience').value.trim(),
+                    keywords: document.getElementById('keywords').value.trim(),
+                    tone: document.getElementById('tone').value,
+                    language: document.getElementById('language').value.trim()
+                };
+
+                try {
+                    const response = await fetch('/api/generate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        displayResults(data.descriptions);
+                        hideError();
+                    } else {
+                        throw new Error(data.error || 'Failed to generate descriptions');
+                    }
+                } catch (error) {
+                    showError('Error generating descriptions: ' + error.message);
+                } finally {
+                    hideLoading();
                 }
-            } catch (error) {
-                responseArea.textContent = `Failed to fetch from our backend:\n${error.message}`;
+            });
+
+            function showLoading() {
+                generateBtn.classList.add('loading');
+                generateBtn.disabled = true;
+                placeholder.style.display = 'none';
+                loadingSpinner.style.display = 'block';
+                resultsContainer.style.display = 'none';
             }
+
+            function hideLoading() {
+                generateBtn.classList.remove('loading');
+                generateBtn.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                placeholder.style.display = 'block';
+            }
+
+            function hideError() {
+                errorMessage.style.display = 'none';
+            }
+
+            function displayResults(descriptionsText) {
+                // Split the descriptions by "---"
+                const descriptions = descriptionsText.split('---').filter(desc => desc.trim());
+                
+                resultsContainer.innerHTML = '';
+                
+                descriptions.forEach((description, index) => {
+                    const card = createDescriptionCard(description.trim(), index + 1);
+                    resultsContainer.appendChild(card);
+                });
+
+                resultsContainer.style.display = 'block';
+                placeholder.style.display = 'none';
+            }
+
+            function createDescriptionCard(content, index) {
+                const card = document.createElement('div');
+                card.className = 'description-card';
+                
+                const lines = content.split('\n').filter(line => line.trim());
+                const title = lines[0] || `Description ${index}`;
+                const body = lines.slice(1).join('\n');
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">Description ${index}</div>
+                        <button class="copy-btn" onclick="copyToClipboard(this, '${escapeHtml(content)}')">Copy</button>
+                    </div>
+                    <div class="card-content">${formatContent(body || content)}</div>
+                `;
+
+                return card;
+            }
+
+            function formatContent(content) {
+                return content
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line)
+                    .map(line => {
+                        if (line.startsWith('*') || line.startsWith('-')) {
+                            return `<div style="margin-left: 1rem;">${line}</div>`;
+                        }
+                        return `<p style="margin-bottom: 0.5rem;">${line}</p>`;
+                    })
+                    .join('');
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML.replace(/'/g, "\\'");
+            }
+
+            // Global function for copy button
+            window.copyToClipboard = async function(button, text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.classList.add('copied');
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    button.textContent = 'Copy failed';
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                }
+            };
         });
     </script>
 </body>
