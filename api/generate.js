@@ -1,104 +1,85 @@
-// No longer need 'jsonwebtoken' as Manus uses a simpler API key
-// const jwt = require('jsonwebtoken'); 
-
 export default async function handler(req, res) {
-    // Set CORS headers for cross-origin requests
+    // Standard CORS and method checks
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-    // Handle preflight OPTIONS request for CORS
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
+    // --- ADVANCED DIAGNOSTICS ---
+    let diagnostics = {};
 
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
-
+    // Test 1: Check basic network connectivity from Vercel's server
     try {
-        // 1. Get the Manus API key from environment variables
+        await fetch('https://www.google.com' );
+        diagnostics.google_connectivity = 'Success';
+    } catch (e) {
+        diagnostics.google_connectivity = `Failed: ${e.message}`;
+    }
+
+    // Test 2: Check DNS resolution for api.manus.ai
+    const manusApiUrl = 'https://api.manus.ai/v1/delegate';
+    try {
+        const url = new URL(manusApiUrl );
+        diagnostics.manus_hostname_resolution = `Attempting to resolve: ${url.hostname}`;
+    } catch (e) {
+        diagnostics.manus_hostname_resolution = `URL parsing failed: ${e.message}`;
+    }
+
+    // --- MAIN LOGIC ---
+    try {
         const manusApiKey = process.env.MANUS_API_KEY;
         if (!manusApiKey) {
             return res.status(500).json({ 
-                error: 'MANUS_API_KEY environment variable is not configured.' 
+                error: 'MANUS_API_KEY environment variable is not configured.',
+                diagnostics: diagnostics 
             });
         }
 
-        // 2. Extract product data from the request body
-        const { 
-            productName, 
-            features, 
-            audience, 
-            keywords, 
-            tone, 
-            language 
-        } = req.body;
-
-        // Validate that all required fields are present
-        if (!productName || !features || !audience || !tone || !language) {
-            return res.status(400).json({ 
-                error: 'Missing required fields: productName, features, audience, tone, and language are all required.' 
-            });
-        }
-
-        // 3. Define the task to be delegated to Manus
-        // This is a structured object, not a long prompt string.
         const taskToDelegate = {
             task_name: "Generate E-commerce Product Description",
-            input_data: {
-                productName: productName,
-                productFeatures: features,
-                targetAudience: audience,
-                seoKeywords: keywords, // Can be an empty string if not provided
-                toneOfVoice: tone,
-                outputLanguage: language
-            },
-            // Specify the desired output format for consistency
+            input_data: req.body,
             output_format: "A single string containing 3 distinct versions, each separated by '---'."
         };
-
-        // 4. Call the Manus Task Delegation API
-        const manusTaskEndpoint = 'https://api.manus.ai/v1/delegate';
-
         
-        const manusResponse = await fetch(manusTaskEndpoint, {
+        // Main API call to Manus
+        const manusResponse = await fetch(manusApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // Manus uses a standard Bearer token authentication
                 'Authorization': `Bearer ${manusApiKey}`
             },
-            body: JSON.stringify(taskToDelegate )
+            body: JSON.stringify(taskToDelegate)
         });
 
-        // 5. Handle the response from Manus
-        const resultData = await manusResponse.json();
+        diagnostics.manus_response_status = manusResponse.status;
+        diagnostics.manus_response_status_text = manusResponse.statusText;
+
+        // This is the critical part. We will read the response as TEXT first.
+        const responseText = await manusResponse.text();
+        diagnostics.manus_raw_response_body = responseText;
 
         if (!manusResponse.ok) {
-            // If Manus API returns an error, forward it to the frontend
-            const errorMessage = resultData.error?.message || `Manus API Error: ${manusResponse.status}`;
-            return res.status(manusResponse.status).json({ error: errorMessage });
+            return res.status(500).json({ 
+                error: `Manus API returned a non-OK status.`,
+                diagnostics: diagnostics
+            });
         }
 
-        // 6. Send the successful result back to the frontend
-        // The result from Manus is expected in resultData.output
-        if (!resultData.output) {
-             return res.status(500).json({ error: 'Invalid response format from Manus API.' });
-        }
-        
+        // Only try to parse as JSON if the response was OK
+        const resultData = JSON.parse(responseText);
+
         return res.status(200).json({ 
-            descriptions: resultData.output 
-            // You can add other data from the Manus response if needed, e.g., usage stats
-            // usage: resultData.usage || null 
+            descriptions: resultData.output,
+            diagnostics: diagnostics 
         });
 
     } catch (error) {
-        // Catch any unexpected network or parsing errors
-        console.error('Error in generate API (Manus):', error);
+        // Catch any unexpected errors during the process
         return res.status(500).json({ 
-            error: 'An unexpected server error occurred: ' + error.message 
+            error: 'An unexpected server error occurred in the main logic.',
+            error_details: error.message,
+            diagnostics: diagnostics
         });
     }
 }
