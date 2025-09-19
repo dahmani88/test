@@ -101,30 +101,80 @@ export default async function handler(req, res) {
 6. The tone of voice MUST be: ${tone}.
 7. Each version must be clearly separated by "---".`;
 
-        // Call the Z.ai API
-        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+        // Try different authentication methods
+        const authMethods = [
+            // Method 1: JWT Bearer token with api_key in payload
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: {
+                    model: 'glm-4.5-flash',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.7,
+                    max_tokens: 2000,
+                    api_key: apiKey
+                }
             },
-            body: JSON.stringify({
-                model: 'glm-4.5-flash',
-                messages: [
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
-                temperature: 0.7,
-                max_tokens: 2000
-            })
-        });
+            // Method 2: Direct API key in header
+            {
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: {
+                    model: 'glm-4.5-flash',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.7,
+                    max_tokens: 2000
+                }
+            },
+            // Method 3: API key in payload only
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: {
+                    model: 'glm-4.5-flash',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.7,
+                    max_tokens: 2000,
+                    api_key: apiKey
+                }
+            }
+        ];
 
-        // Check if the API call was successful
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            const errorMessage = errorData?.error?.message || `Z.ai API error: ${response.status} ${response.statusText}`;
+        let response;
+        let lastError;
+
+        // Try each authentication method
+        for (const method of authMethods) {
+            try {
+                response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+                    method: 'POST',
+                    headers: method.headers,
+                    body: JSON.stringify(method.body)
+                });
+
+                if (response.ok) {
+                    break; // Success! Exit the loop
+                }
+                
+                // Store the error for potential debugging
+                const errorText = await response.text();
+                lastError = `${response.status}: ${errorText}`;
+                
+            } catch (error) {
+                lastError = error.message;
+                continue; // Try next method
+            }
+        }
+
+        // Check if any method worked
+        if (!response || !response.ok) {
+            const errorData = await response?.json().catch(() => null);
+            const errorMessage = errorData?.error?.message || lastError || `Z.ai API error: ${response?.status} ${response?.statusText}`;
             
             return res.status(500).json({ 
                 error: `Failed to generate descriptions: ${errorMessage}` 
