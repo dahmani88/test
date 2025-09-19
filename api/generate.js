@@ -4,16 +4,30 @@ function generateToken(apiKey) {
     try {
         const [id, secret] = apiKey.split('.');
         
+        if (!id || !secret) {
+            throw new Error('Invalid API key format - missing id or secret');
+        }
+        
+        const now = Math.floor(Date.now() / 1000);
         const payload = {
             iss: id,
-            exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiration
-            iat: Math.floor(Date.now() / 1000)
+            exp: now + 1800, // 30 minutes expiration (shorter than 1 hour)
+            iat: now,
+            sub: id
         };
         
-        const token = jwt.sign(payload, secret, { algorithm: 'HS256' });
+        // Use the secret part directly as the signing key
+        const token = jwt.sign(payload, secret, { 
+            algorithm: 'HS256',
+            header: {
+                alg: 'HS256',
+                sign_type: 'SIGN'
+            }
+        });
+        
         return token;
     } catch (error) {
-        throw new Error('Invalid API key format');
+        throw new Error('Invalid API key format: ' + error.message);
     }
 }
 
@@ -123,7 +137,7 @@ export default async function handler(req, res) {
         // Extract the generated content
         if (!data.choices || !data.choices[0] || !data.choices[0].message) {
             return res.status(500).json({ 
-                error: 'Invalid response format from Z.ai API'
+                error: 'Invalid response format from Z.ai API' 
             });
         }
 
