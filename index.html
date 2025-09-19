@@ -1,50 +1,38 @@
 <!DOCTYPE html>
-
+<html lang="en">
 <head>
-	<title>first project</title>
-	<style>
-		.header	{
-			background-color: rgb(20, 19, 19);
-			display: flex;
-			justify-content: space-between;
-			align-items:center;
-			padding: 0 20px;
-		}
-		.links a{
-			padding: 3px 10px;
-			border: 10px;
-			color: rgb(156, 223, 120);
-			text-decoration: none;
-		}
-		.links a:hover {
-			color:rgb(99, 80, 109);
-			background-color: rgb(234, 212, 248);
-			border-radius: 10px;
-		}
-		.links button:hover {
-			background-color: #6c2c96;
-			color: #d3cdd7;
-		}
-		.links button{
-			color: rgb(67, 61, 74);
-			background-color: #c89de5;
-			border: 0;
-			border-radius: 10px;
-		}
-	</style>
+    <meta charset="UTF-8">
+    <title>Backend API Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #response { white-space: pre-wrap; background-color: #f4f4f4; border: 1px solid #ddd; padding: 15px; margin-top: 20px; }
+    </style>
 </head>
-<body style="background-color: #352063; margin: 0%;">
-	<div class="header">
-		<img
-			src="https://i.pinimg.com/1200x/d5/7b/75/d57b75ed30371746f70364dd53bc4511.jpg"
-			width="120"
-		>
-		<div  class="links">
-			<a href="#">home</a>
-			<a href="#">our stor</a>
-			<a href="#">product info</a>
-			<a href="#">contact</a>
-			<button><h4>sign in</h4></button>
-		</div>
-	</div>
+<body>
+    <h1>Backend API Proxy Test</h1>
+    <p>This button calls our own backend, which then calls Z.ai securely.</p>
+    <button id="testButton">Test Backend Proxy</button>
+    <h2>API Response:</h2>
+    <pre id="response">Click the button to see the response...</pre>
+    <script>
+        document.getElementById('testButton').addEventListener('click', async () => {
+            const responseArea = document.getElementById('response');
+            responseArea.textContent = 'Sending request to our backend...';
+            
+            try {
+                // Step 1: Frontend calls our own backend endpoint
+                const response = await fetch('/api/proxy', { method: 'POST' });
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    responseArea.textContent = `Error from our backend:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    responseArea.textContent = `Success! Response from Z.ai:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseArea.textContent = `Failed to fetch from our backend:\n${error.message}`;
+            }
+        });
+    </script>
 </body>
+</html>
