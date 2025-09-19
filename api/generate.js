@@ -60,7 +60,8 @@ export default async function handler(req, res) {
         };
 
         // 4. Call the Manus Task Delegation API
-        const manusTaskEndpoint = 'https://api.manus.ai/v1/tasks/delegate';
+        const manusTaskEndpoint = 'https://api.manus.ai/v1/delegate';
+
         
         const manusResponse = await fetch(manusTaskEndpoint, {
             method: 'POST',
