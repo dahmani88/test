@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Backend API Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #response { white-space: pre-wrap; background-color: #f4f4f4; border: 1px solid #ddd; padding: 15px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Backend API Proxy Test</h1>
+    <p>This button calls our own backend, which then calls Z.ai securely.</p>
+    <button id="testButton">Test Backend Proxy</button>
+    <h2>API Response:</h2>
+    <pre id="response">Click the button to see the response...</pre>
+    <script>
+        document.getElementById('testButton').addEventListener('click', async () => {
+            const responseArea = document.getElementById('response');
+            responseArea.textContent = 'Sending request to our backend...';
+            
+            try {
+                // Step 1: Frontend calls our own backend endpoint
+                const response = await fetch('/api/proxy', { method: 'POST' });
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    responseArea.textContent = `Error from our backend:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    responseArea.textContent = `Success! Response from Z.ai:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseArea.textContent = `Failed to fetch from our backend:\n${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>
